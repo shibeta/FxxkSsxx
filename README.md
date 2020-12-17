@@ -29,7 +29,7 @@
 回车，将浏览器输出的内容中**双引号之内**的文本复制出来，比如这里就是`eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2MDc5NTA1NzIsImlhdCI6MTYwNzkzOTc3MiwiaXNzIjoiSEVQRTM6QVVUSCIsIm5iZiI6MTYwNzkzOTc3MiwidWlkIjoiNWZjZGU3NWIyM2NkYTgzM2FhZDU3NzIyIiwibmFtZSI6Ilx1OTFkMVx1OTAzOFx1NTllMyIsImNvZGUiOiI1ZmNkZTc1YjIzY2RhODMzYWFkNTc3MjIiLCJpc19wZXJmZWN0Ijp0cnVlfQ.TQkfjUkMapGznr9KKIu-vRSW1UoILCXqBea0gZ03aGE`
 ![](https://i.loli.net/2020/12/14/VbMjOc48EBTotx5.png)
 
-运行fuck.exe，将刚刚拿到的token粘贴进控制台
+运行FxxkSsxx.exe，将刚刚拿到的token粘贴进控制台
 ![](https://i.loli.net/2020/12/14/v9ynZaUwJcTDz15.png)
 
 回车，程序会自动开始答题，觉得分数差不多了**直接停止程序运行**即可
