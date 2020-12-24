@@ -4,6 +4,7 @@ import time
 import random
 import re
 import hashlib
+import os
 
 answer_dictionary = {}
 
@@ -65,6 +66,7 @@ def StartQuiz(header):
 
     if quiz_object["code"] != 0:
         print("开始考试失败，状态码：", quiz_object["code"], "错误原因：", quiz_object["message"])
+        os.system("pause")
         quit(0)
 
     print("开始考试成功，本次考试信息如下：")
@@ -93,6 +95,7 @@ def GetQuestionDetail(question_id, header):
     question_detail_object = json.loads(response.text)
     if question_detail_object["code"] != 0:
         print("获取题目信息失败。问题ID：", question_id, "错误代码：", question_detail_object["code"], "错误信息：", question_detail_object["message"])
+        os.system("pause")
         quit(-1)
         
     else:
@@ -193,13 +196,16 @@ header = BuildHeader(token)
 while True:
     question_list, race_code = StartQuiz(header)
     for i in range(0, 20):
-        if SubmitAnswer(BuildAnswerObject(GetQuestionDetail(question_list[i], header)), header):
-            print("第", i, "题回答正确！")
-            time.sleep(float(random.randint(500, 1500)) / 1000)
-        else:
-            print("第", i, "题回答错误，答案已更新！")
-            time.sleep(float(random.randrange(1500, 3000)) / 1000)
-            SaveAnswerToFile()
+        try:
+            if SubmitAnswer(BuildAnswerObject(GetQuestionDetail(question_list[i], header)), header):
+                print("第", i, "题回答正确！")
+                time.sleep(float(random.randint(500, 1500)) / 1000)
+            else:
+                print("第", i, "题回答错误，答案已更新！")
+                time.sleep(float(random.randrange(1500, 3000)) / 1000)
+                SaveAnswerToFile()
+        except:
+            pass
     FinishQuiz(race_code)
     # SaveAnswerToFile()
     time.sleep(float(random.randrange(1500, 3000)) / 1000)
