@@ -17,7 +17,7 @@
 
 ## 使用方法
 
-首先下载[FxxkSsxx.exe](https://github.com/deximy/FxxkSsxx/releases/download/1.0/FxxkSsxx.exe)和answer.txt到本地随便一个地方，在同一个文件夹里就行
+首先下载[FxxkSsxx.exe](https://github.com/deximy/FxxkSsxx/releases/download/1.1/FxxkSsxx.exe)和answer.txt到本地随便一个地方，在同一个文件夹里就行
 
 打开网页端：http://ssxx.univs.cn/client/detail/5f71e934bcdbf3a8c3ba5061
 认证登录成功后在页面随便一个地方右键，点击Inspect/审查元素
