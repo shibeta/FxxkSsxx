@@ -16,7 +16,7 @@ class MyError(Exception):
         self.code = code
         self.msg = msg
     def __str__(self):
-        return self.msg + "(" + self.code + ")"
+        return self.msg + "(" + str(self.code) + ")"
 
 
 def SendNotification(msg):
@@ -170,8 +170,7 @@ def SubmitAnswer(answer_object, header):
     response = requests.request("POST", url, headers = header, data = json.dumps(answer_object[0]))
 
     if response.status_code != 200:
-        print(response)
-        return
+        raise MyError(response.status_code, "提交答案失败")
 
     result_object = json.loads(response.text)
 
@@ -254,7 +253,7 @@ except MyError as err:
 
     if err.code == 1001 or err.code == 1002:
         print(tag + "登录无效，通知重新登录")
-        SendNotification("请重新登录（代码：" + err.code + "）")
+        SendNotification("请重新登录（代码：" + str(err.code) + "）")
     else:
         msg = "已停止，原因：" + str(err)
         print(tag + msg)
