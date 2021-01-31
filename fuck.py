@@ -225,9 +225,9 @@ def FinishQuiz(race_code):
 ReadAnswerFromFile()
 print("打开网页端：https://ssxx.univs.cn/client/detail/5f71e934bcdbf3a8c3ba5061 认证登录成功后")
 print("在地址栏输入javascript:document.write(localStorage.token)复制显示的内容")
-print("或按F12，转到Console页面，输入localStorage.token后回车，输出的结果中 不 带 引 号 的 部 分 复制下来并输入即可")
+print("或按F12，转到Console页面，输入localStorage.token后回车，输出的结果复制下来并输入即可")
 print("请输入token：")
-token = input()
+token = input().strip().strip("\"")
 header = BuildHeader(token)
 
 # SendNotification("准备开始")
