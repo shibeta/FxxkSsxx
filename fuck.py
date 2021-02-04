@@ -1,3 +1,7 @@
+#!/usr/bin/python3
+
+# -*- coding: utf-8 -*-
+
 import requests
 import json
 import time
@@ -6,22 +10,28 @@ import re
 import hashlib
 import os
 import platform
+import sys
+import traceback
+import getopt
 
+VERSION_NAME = "fxxkSsxx 1.3"
+
+informEnabled = False
 answer_dictionary = {}
-
 hit_count = 0
+
 
 class MyError(Exception):
     def __init__(self, code, msg):
         self.code = code
         self.msg = msg
+
     def __str__(self):
-        return self.msg + "(" + str(self.code) + ")"
+        return "{}({})".format(self.msg, self.code)
 
 
 def SendNotification(msg):
-    ENABLE = False   # 是否通过webhook发送通知（结合QQ机器人插件使用）
-    if not ENABLE:
+    if not informEnabled:
         print("[info] ", msg)
         return
     url = "http://localhost:6666"
@@ -36,7 +46,6 @@ def ReadAnswerFromFile():
     answer_dictionary = json.loads(answer_file.read())
     print("已读取", len(answer_dictionary.items()), "个答案！")
     answer_file.close()
-
 
 
 def SaveAnswerToFile():
@@ -63,12 +72,10 @@ def BuildHeader(token):
     return headers
 
 
-
 def PrintQuizObject(quiz_object):
     print("问题ID列表：")
     for i in range(0, 20):
         print("问题", i, "：", quiz_object["question_ids"][i])
-
 
 
 def StartQuiz(header):
@@ -79,8 +86,8 @@ def StartQuiz(header):
 
     url = "https://ssxx.univs.cn/cgi-bin/race/beginning/?activity_id=5f71e934bcdbf3a8c3ba5061&mode_id=5f71e934bcdbf3a8c3ba51d5&way=1"
 
-    for fail in [0,1,2]:    # 最多尝试等待3次
-        response = requests.request("GET", url, headers = header)
+    for fail in [0, 1, 2]:    # 最多尝试等待3次
+        response = requests.request("GET", url, headers=header)
         quiz_object = json.loads(response.text)
         status_code = quiz_object["code"]
 
@@ -91,7 +98,7 @@ def StartQuiz(header):
             return quiz_object["question_ids"], quiz_object["race_code"]
 
         elif status_code == 4832:
-            print("答题太快，被阻止，等待10分钟")
+            print("答题次数用完，等待10分钟")
             if fail == 0:   # 在开始等待时发送通知
                 SendNotification("...")
             time.sleep(600)
@@ -102,34 +109,37 @@ def StartQuiz(header):
 
 def GetTitleMd5(title):
     # print("原title：", title)
-    title = re.sub(r"<(\w+)[^>]+?(?:display: {0,}none;).*?>.*?<\/\1>", "", title)
+    title = re.sub(
+        r"<(\w+)[^>]+?(?:display: {0,}none;).*?>.*?<\/\1>", "", title)
     title = re.sub("<.*?>", "", title)
     result = hashlib.md5(title.encode(encoding='UTF-8')).hexdigest()
     print(title, ", hash:", result)
     return result
 
 
-
 def GetQuestionDetail(question_id, header):
-    url = "https://ssxx.univs.cn/cgi-bin/race/question/?activity_id=5f71e934bcdbf3a8c3ba5061&question_id=" + question_id + "&mode_id=5f71e934bcdbf3a8c3ba51d5&way=1"
+    url = "https://ssxx.univs.cn/cgi-bin/race/question/?activity_id=5f71e934bcdbf3a8c3ba5061&question_id=" + \
+        question_id + "&mode_id=5f71e934bcdbf3a8c3ba51d5&way=1"
 
-    response = requests.request("GET", url, headers = header)
+    response = requests.request("GET", url, headers=header)
 
     question_detail_object = json.loads(response.text)
     if question_detail_object["code"] != 0:
-        raise MyError(question_detail_object["code"], "获取题目信息失败。问题ID：" + question_id + "错误信息：" + str(question_detail_object["message"]))
-    
+        raise MyError(question_detail_object["code"], "获取题目信息失败。问题ID：" +
+                      question_id + "错误信息：" + str(question_detail_object["message"]))
+
     print("获取题目信息成功。")
     # print("当前问题：", question_detail_object["data"]["title"])
-    
+
     question = {}
     question["id"] = question_detail_object["data"]["id"]
     question["title"] = GetTitleMd5(question_detail_object["data"]["title"])
     question["answer_list"] = []
     for i in question_detail_object["data"]["options"]:
         question["answer_list"].append((i["id"], GetTitleMd5(i["title"])))
-    
+
     return question
+
 
 def BuildAnswerObject(question):
     global answer_dictionary
@@ -159,7 +169,6 @@ def BuildAnswerObject(question):
     return answer_object, question
 
 
-
 def SubmitAnswer(answer_object, header):
     global answer_dictionary
 
@@ -167,7 +176,8 @@ def SubmitAnswer(answer_object, header):
 
     header["Content-Type"] = "application/json;charset=utf-8"
 
-    response = requests.request("POST", url, headers = header, data = json.dumps(answer_object[0]))
+    response = requests.request(
+        "POST", url, headers=header, data=json.dumps(answer_object[0]))
 
     if response.status_code != 200:
         raise MyError(response.status_code, "提交答案失败")
@@ -197,14 +207,14 @@ def SubmitAnswer(answer_object, header):
     return result_object["data"]["correct"]
 
 
-
-def FinishQuiz(race_code):
+def FinishQuiz(race_code, header):
     url = "https://ssxx.univs.cn/cgi-bin/race/finish/"
 
-    header["Content-Type"] = "application/json"
+    header["Content-Type"] = "application/json;charset=utf-8"
     payload = "{\"race_code\":\"" + race_code + "\"}"
 
-    result = json.loads(requests.request("POST", url, headers = header, data = payload).text)
+    result = json.loads(requests.request(
+        "POST", url, headers=header, data=payload).text)
     fail = 0
     while result["code"] != 0:
         print("完成考试时出错，错误代码：", result)
@@ -215,52 +225,99 @@ def FinishQuiz(race_code):
         if fail > 5:
             raise MyError(err_code, "完成时出错：" + str(result))
         time.sleep(0.5)
-        result = json.loads(requests.request("POST", url, headers = header, data = payload).text)
+        result = json.loads(requests.request(
+            "POST", url, headers=header, data=payload).text)
+
+    print("回答完毕，本次得分：", result["data"]["owner"]
+          ["correct_amount"], "答案库命中数：", hit_count)
 
 
-    print("回答完毕，本次得分：", result["data"]["owner"]["correct_amount"], "答案库命中数：", hit_count)
-
-
-
-ReadAnswerFromFile()
-print("打开网页端：https://ssxx.univs.cn/client/detail/5f71e934bcdbf3a8c3ba5061 认证登录成功后")
-print("在地址栏输入javascript:document.write(localStorage.token)复制显示的内容")
-print("或按F12，转到Console页面，输入localStorage.token后回车，输出的结果复制下来并输入即可")
-print("请输入token：")
-token = input().strip().strip("\"")
-header = BuildHeader(token)
-
-# SendNotification("准备开始")
-
-try:
-    while True:
-        question_list, race_code = StartQuiz(header)
-        for i in range(0, 20):
-            if SubmitAnswer(BuildAnswerObject(GetQuestionDetail(question_list[i], header)), header):
-                print("第", i, "题回答正确！")
-                time.sleep(float(random.randint(500, 900)) / 1000)
-            else:
-                print("第", i, "题回答错误，答案已更新！")
-                time.sleep(float(random.randrange(1500, 3000)) / 1000)
-                SaveAnswerToFile()
-       
-        FinishQuiz(race_code)
-        time.sleep(float(random.randrange(700, 2000)) / 1000)
-
-except MyError as err:
-    localtime = time.asctime( time.localtime(time.time()) )
-    tag = "[" + localtime + "] "
-
-    if err.code == 1001 or err.code == 1002:
-        print(tag + "登录无效，通知重新登录")
-        SendNotification("请重新登录（代码：" + str(err.code) + "）")
-    else:
-        msg = "已停止，原因：" + str(err)
-        print(tag + msg)
-        SendNotification(msg)
-finally:
-     # SaveAnswerToFile()
-     SendNotification("awsl")   # 程序退出时发送通知
-
-     if platform.system() == "Windows":
+def Pause():
+    if platform.system() == "Windows":
         os.system("pause")
+
+
+def Start(token):
+    ReadAnswerFromFile()
+
+    header = BuildHeader(token)
+
+    # SendNotification("准备开始")
+
+    try:
+        while True:
+            question_list, race_code = StartQuiz(header)
+            for i in range(0, 20):
+                if SubmitAnswer(BuildAnswerObject(GetQuestionDetail(question_list[i], header)), header):
+                    print("第", i, "题回答正确！")
+                    time.sleep(float(random.randint(500, 900)) / 1000)
+                else:
+                    print("第", i, "题回答错误，答案已更新！")
+                    time.sleep(float(random.randrange(1500, 3000)) / 1000)
+                    SaveAnswerToFile()
+
+            FinishQuiz(race_code, header)
+            time.sleep(float(random.randrange(700, 2000)) / 1000)
+
+    except MyError as err:
+        tag = "[{}] ".format(time.asctime(time.localtime(time.time())))
+
+        if err.code == 1001 or err.code == 1002:
+            print(tag, "登录无效，通知重新登录")
+            SendNotification("请重新登录（代码：{}）".format(err.code))
+        elif err.code == 1005:
+            print(tag, "当前token已退出登录，请重新获取")
+        else:
+            msg = "已停止，原因：" + str(err)
+            print(tag, msg)
+            SendNotification(msg)
+    except Exception as err:
+        tag = "[{}] ".format(time.asctime(time.localtime(time.time())))
+        print(tag, traceback.format_exc())
+    finally:
+        # SaveAnswerToFile()
+        SendNotification("awsl")   # 程序退出时发送通知
+        Pause()
+
+
+def PrintHelp():
+    print("fxxkSsxx")
+    print(sys.argv[0])
+    print()
+    print("    -h, --help       显示此帮助信息")
+    print("    -i, --inform     启用webhook通知")
+    print("    -v, --version    显示版本号")
+    print()
+    print("https://github.com/deximy/FxxkSsxx")
+
+
+if __name__ == "__main__":
+    argv = sys.argv[1:]
+
+    try:
+        opts, args = getopt.getopt(argv, "hiv", ["help", "inform", "version"])
+    except getopt.GetoptError:
+        PrintHelp()
+        Pause()
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt in ['-h', '--help']:
+            PrintHelp()
+            Pause()
+            sys.exit()
+        elif opt in ['-i', '--inform']:
+            informEnabled = True
+        elif opt in ['-v', '--version']:
+            print(VERSION_NAME)
+            Pause()
+            sys.exit()
+
+    print("打开网页端：https://ssxx.univs.cn/client/detail/5f71e934bcdbf3a8c3ba5061 认证登录成功后")
+    print("在地址栏输入javascript:document.write(localStorage.token)复制显示的内容")
+    print("或按F12，转到Console页面，输入localStorage.token后回车，输出的结果复制下来并输入即可")
+    token = input("请输入token：").strip()
+    if token.find("token:") == 0:
+        token = token[6:]
+    token = token.strip("\"")
+    Start(token)
