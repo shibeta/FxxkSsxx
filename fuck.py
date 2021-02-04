@@ -13,12 +13,15 @@ import platform
 import sys
 import traceback
 import getopt
+import base64
 
 VERSION_NAME = "fxxkSsxx 1.3"
 
-informEnabled = False
 answer_dictionary = {}
+expireTime = -1
 hit_count = 0
+informEnabled = False
+autoRefreshTokenEnabled = False
 
 
 class MyError(Exception):
@@ -28,6 +31,36 @@ class MyError(Exception):
 
     def __str__(self):
         return "{}({})".format(self.msg, self.code)
+
+
+def ParseToken(token):
+    data = token.split('.')
+    userInfo = json.loads(str(base64.b64decode(data[1] + "=="), "utf-8"))
+
+    token_info = {
+        "name": userInfo["name"],
+        "uid": userInfo["uid"],
+        "time": int(userInfo["iat"]),
+        "expire": int(userInfo["exp"])
+    }
+    return token_info
+
+
+def RefreshToken(header):
+    url = "https://ssxx.univs.cn/cgi-bin/authorize/token/refresh/"
+    response = requests.get(url, headers=header)
+    
+    result = json.loads(response.text)
+    if result["code"] != 0:
+        raise MyError(result["code"], "更新token失败：" + str(result["message"]))
+    
+    new_token = result["token"]
+
+    detail = ParseToken(new_token)
+    print("token更新完成，于 ", time.asctime(time.localtime(detail["time"])), " 生效")
+    print("将在 ", time.asctime(time.localtime(detail["expire"])), " 失效")
+
+    return new_token
 
 
 def SendNotification(msg):
@@ -238,6 +271,9 @@ def Pause():
 
 
 def Start(token):
+    global autoRefreshTokenEnabled
+    global expireTime
+
     ReadAnswerFromFile()
 
     header = BuildHeader(token)
@@ -258,6 +294,13 @@ def Start(token):
 
             FinishQuiz(race_code, header)
             time.sleep(float(random.randrange(700, 2000)) / 1000)
+
+            if autoRefreshTokenEnabled and expireTime - time.time() < 500:
+                new_token = RefreshToken(header)
+                expireTime = ParseToken(new_token)["expire"]
+                header = BuildHeader(new_token)
+                SendNotification("token已更新至 " + time.asctime(time.localtime(expireTime)))
+                time.sleep(5)
 
     except MyError as err:
         tag = "[{}] ".format(time.asctime(time.localtime(time.time())))
@@ -284,8 +327,9 @@ def PrintHelp():
     print("fxxkSsxx")
     print(sys.argv[0])
     print()
+    print("    -a, --auto       自动更新token  （默认关）")
     print("    -h, --help       显示此帮助信息")
-    print("    -i, --inform     启用webhook通知")
+    print("    -i, --inform     启用webhook通知（默认关）")
     print("    -v, --version    显示版本号")
     print()
     print("https://github.com/deximy/FxxkSsxx")
@@ -295,14 +339,16 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
 
     try:
-        opts, args = getopt.getopt(argv, "hiv", ["help", "inform", "version"])
+        opts, args = getopt.getopt(argv, "ahiv", ["auto", "help", "inform", "version"])
     except getopt.GetoptError:
         PrintHelp()
         Pause()
         sys.exit(2)
 
     for opt, arg in opts:
-        if opt in ['-h', '--help']:
+        if opt in ['-a', '--auto']:
+            autoRefreshTokenEnabled = True
+        elif opt in ['-h', '--help']:
             PrintHelp()
             Pause()
             sys.exit()
@@ -319,5 +365,13 @@ if __name__ == "__main__":
     token = input("请输入token：").strip()
     if token.find("token:") == 0:
         token = token[6:]
-    token = token.strip("\"")
+    token = token.strip("\" ")
+
+    tokenInfo = ParseToken(token)
+    expireTime = tokenInfo["expire"]
+    print(tokenInfo["name"], "，欢迎使用！")
+    print("uid: ", tokenInfo["uid"])
+    print("token有效期剩余：", time.strftime("%Hh %Mm %Ss", time.gmtime(expireTime - time.time())))
+
+    time.sleep(2.5)
     Start(token)
