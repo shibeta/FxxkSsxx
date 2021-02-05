@@ -15,11 +15,18 @@ import traceback
 import getopt
 import base64
 
-VERSION_NAME = "fxxkSsxx 1.3"
+VERSION_NAME = "fxxkSsxx 1.3 test"
 
 answer_dictionary = {}
 expireTime = -1
 hit_count = 0
+modeIdList = [
+    "5f71e934bcdbf3a8c3ba51d5",  # 英雄篇
+    "5f71e934bcdbf3a8c3ba51d6",  # 创新篇
+    "5f71e934bcdbf3a8c3ba51d7",  # 复兴篇
+    "5f71e934bcdbf3a8c3ba51d8",  # 信念篇
+]
+modeId = modeIdList[1]
 informEnabled = False
 autoRefreshTokenEnabled = False
 
@@ -31,6 +38,38 @@ class MyError(Exception):
 
     def __str__(self):
         return "{}({})".format(self.msg, self.code)
+
+
+def SubmitVerification(header):
+    code = "HD1bhUGI4d/FhRfIX4m972tZ0g3jRHIwH23ajyre9m1Jxyw4CQ1bMKeIG5T/voFOsKLmnazWkPe6yBbr+juVcMkPwqyafu4JCDePPsVEbVSjLt8OsiMgjloG1fPKANShQCHAX6BwpK33pEe8jSx55l3Ruz/HfcSjDLEHCATdKs4="
+    submit_data = {
+        "activity_id": "5f71e934bcdbf3a8c3ba5061",
+        "mode_id": modeId,
+        "way": "1",
+        "code": code
+    }
+    url = "https://ssxx.univs.cn/cgi-bin/save/verification/code/"
+    response = requests.post(url, json=submit_data, headers=header)
+    result = json.loads(response.text)
+    if result["code"] != 0:
+        raise MyError(result["code"], "提交验证码失败：" + str(result))
+
+
+def CheckVerification(header):
+    code = "E5ZKeoD8xezW4TVEn20JVHPFVJkBIfPg+zvMGW+kx1s29cUNFfNka1+1Fr7lUWsyUQhjiZXHDcUhbOYJLK4rS5MflFUvwSwd1B+1kul06t1z9x0mfxQZYggbnrJe3PKEk4etwG/rm3s3FFJd/EbFSdanfslt41aULzJzSIJ/HWI="
+    submit_data = {
+        "activity_id": "5f71e934bcdbf3a8c3ba5061",
+        "mode_id": modeId,
+        "way": "1",
+        "code": code
+    }
+    url = "https://ssxx.univs.cn/cgi-bin/check/verification/code/"
+    response = requests.post(url, json=submit_data, headers=header)
+    result = json.loads(response.text)
+    if result["code"] != 0:
+        raise MyError(result["code"], "检查验证码失败：" + str(result))
+
+    return result["status"]
 
 
 def ParseToken(token):
@@ -49,11 +88,11 @@ def ParseToken(token):
 def RefreshToken(header):
     url = "https://ssxx.univs.cn/cgi-bin/authorize/token/refresh/"
     response = requests.get(url, headers=header)
-    
+
     result = json.loads(response.text)
     if result["code"] != 0:
         raise MyError(result["code"], "更新token失败：" + str(result["message"]))
-    
+
     new_token = result["token"]
 
     detail = ParseToken(new_token)
@@ -97,7 +136,7 @@ def BuildHeader(token):
         'Connection': 'keep-alive',
         'DNT': '1',
         'Host': 'ssxx.univs.cn',
-        'Referer': 'https://ssxx.univs.cn/client/exam/5f71e934bcdbf3a8c3ba5061/1/1/5f71e934bcdbf3a8c3ba51d5',
+        'Referer': 'https://ssxx.univs.cn/client/exam/5f71e934bcdbf3a8c3ba5061/1/1/' + modeId,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36',
         'Authorization': 'Bearer ' + token,
     }
@@ -117,7 +156,8 @@ def StartQuiz(header):
 
     print("尝试开始考试……")
 
-    url = "https://ssxx.univs.cn/cgi-bin/race/beginning/?activity_id=5f71e934bcdbf3a8c3ba5061&mode_id=5f71e934bcdbf3a8c3ba51d5&way=1"
+    url = "https://ssxx.univs.cn/cgi-bin/race/beginning/?activity_id=5f71e934bcdbf3a8c3ba5061&mode_id={}&way=1".format(
+        modeId)
 
     for fail in [0, 1, 2]:    # 最多尝试等待3次
         response = requests.request("GET", url, headers=header)
@@ -141,7 +181,6 @@ def StartQuiz(header):
 
 
 def GetTitleMd5(title):
-    # print("原title：", title)
     title = re.sub(
         r"<(\w+)[^>]+?(?:display: {0,}none;).*?>.*?<\/\1>", "", title)
     title = re.sub("<.*?>", "", title)
@@ -151,18 +190,17 @@ def GetTitleMd5(title):
 
 
 def GetQuestionDetail(question_id, header):
-    url = "https://ssxx.univs.cn/cgi-bin/race/question/?activity_id=5f71e934bcdbf3a8c3ba5061&question_id=" + \
-        question_id + "&mode_id=5f71e934bcdbf3a8c3ba51d5&way=1"
+    url = "https://ssxx.univs.cn/cgi-bin/race/question/?activity_id=5f71e934bcdbf3a8c3ba5061&question_id={}&mode_id={}&way=1".format(
+        question_id, modeId)
 
     response = requests.request("GET", url, headers=header)
 
     question_detail_object = json.loads(response.text)
     if question_detail_object["code"] != 0:
         raise MyError(question_detail_object["code"], "获取题目信息失败。问题ID：" +
-                      question_id + "错误信息：" + str(question_detail_object["message"]))
+                      question_id + "错误信息：" + str(question_detail_object))
 
     print("获取题目信息成功。")
-    # print("当前问题：", question_detail_object["data"]["title"])
 
     question = {}
     question["id"] = question_detail_object["data"]["id"]
@@ -184,7 +222,7 @@ def BuildAnswerObject(question):
         "activity_id": "5f71e934bcdbf3a8c3ba5061",
         "question_id": question["id"],
         "answer": None,
-        "mode_id": "5f71e934bcdbf3a8c3ba51d5",
+        "mode_id": modeId,
         "way": "1"
     }
 
@@ -271,14 +309,12 @@ def Pause():
 
 
 def Start(token):
-    global autoRefreshTokenEnabled
+    global modeId
     global expireTime
 
     ReadAnswerFromFile()
 
     header = BuildHeader(token)
-
-    # SendNotification("准备开始")
 
     try:
         while True:
@@ -290,7 +326,13 @@ def Start(token):
                 else:
                     print("第", i, "题回答错误，答案已更新！")
                     time.sleep(float(random.randrange(1500, 3000)) / 1000)
-                    SaveAnswerToFile()
+
+                if i == 10:
+                    if CheckVerification(header):
+                        print("验证码已通过")
+                    else:
+                        SubmitVerification(header)
+                        print("验证码状态：", CheckVerification(header))
 
             FinishQuiz(race_code, header)
             time.sleep(float(random.randrange(700, 2000)) / 1000)
@@ -299,7 +341,9 @@ def Start(token):
                 new_token = RefreshToken(header)
                 expireTime = ParseToken(new_token)["expire"]
                 header = BuildHeader(new_token)
-                SendNotification("token已更新至 " + time.asctime(time.localtime(expireTime)))
+                SendNotification(new_token)
+                SendNotification(
+                    "token已更新至 " + time.asctime(time.localtime(expireTime)))
                 time.sleep(5)
 
     except MyError as err:
@@ -318,7 +362,7 @@ def Start(token):
         tag = "[{}] ".format(time.asctime(time.localtime(time.time())))
         print(tag, traceback.format_exc())
     finally:
-        # SaveAnswerToFile()
+        SaveAnswerToFile()
         SendNotification("awsl")   # 程序退出时发送通知
         Pause()
 
@@ -339,7 +383,8 @@ if __name__ == "__main__":
     argv = sys.argv[1:]
 
     try:
-        opts, args = getopt.getopt(argv, "ahiv", ["auto", "help", "inform", "version"])
+        opts, args = getopt.getopt(
+            argv, "ahiv", ["auto", "help", "inform", "version"])
     except getopt.GetoptError:
         PrintHelp()
         Pause()
@@ -365,13 +410,14 @@ if __name__ == "__main__":
     token = input("请输入token：").strip()
     if token.find("token:") == 0:
         token = token[6:]
-    token = token.strip("\" ")
+    token = token.strip("\"")
 
     tokenInfo = ParseToken(token)
     expireTime = tokenInfo["expire"]
     print(tokenInfo["name"], "，欢迎使用！")
     print("uid: ", tokenInfo["uid"])
-    print("token有效期剩余：", time.strftime("%Hh %Mm %Ss", time.gmtime(expireTime - time.time())))
+    print("token有效期剩余：", time.strftime(
+        "%Hh %Mm %Ss", time.gmtime(expireTime - time.time())))
 
     time.sleep(2.5)
     Start(token)
