@@ -349,7 +349,7 @@ def Start(token):
             if autoRefreshTokenEnabled and expireTime - time.time() < 500:
                 new_token = RefreshToken(header)
                 expireTime = ParseToken(new_token)["expire"]
-                header = BuildHeader(new_token)
+                token = new_token
                 SendNotification(new_token)
                 SendNotification(
                     "token已更新至 " + time.asctime(time.localtime(expireTime)))
