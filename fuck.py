@@ -15,18 +15,19 @@ import traceback
 import getopt
 import base64
 
-VERSION_NAME = "fxxkSsxx 1.3 test"
+VERSION_NAME = "fxxkSsxx 1.3 beta"
 
 answer_dictionary = {}
 expireTime = -1
 hit_count = 0
 modeIdList = [
-    "5f71e934bcdbf3a8c3ba51d5",  # 英雄篇
-    "5f71e934bcdbf3a8c3ba51d6",  # 创新篇
-    "5f71e934bcdbf3a8c3ba51d7",  # 复兴篇
-    "5f71e934bcdbf3a8c3ba51d8",  # 信念篇
+    {"id": "5f71e934bcdbf3a8c3ba51d5", "name": "英雄篇"},
+    {"id": "5f71e934bcdbf3a8c3ba51d6", "name": "复兴篇"},
+    {"id": "5f71e934bcdbf3a8c3ba51d7", "name": "创新篇"},
+    {"id": "5f71e934bcdbf3a8c3ba51d8", "name": "信念篇"},
 ]
-modeId = modeIdList[1]
+modeId = None
+modeRandom = True
 informEnabled = False
 autoRefreshTokenEnabled = False
 
@@ -195,6 +196,9 @@ def GetQuestionDetail(question_id, header):
 
     response = requests.request("GET", url, headers=header)
 
+    if response.status_code != 200:
+        raise MyError(response.status_code, "获取题目信息失败")
+
     question_detail_object = json.loads(response.text)
     if question_detail_object["code"] != 0:
         raise MyError(question_detail_object["code"], "获取题目信息失败。问题ID：" +
@@ -234,8 +238,8 @@ def BuildAnswerObject(question):
             if i[1] in answer_dictionary[question["title"]]:
                 answer_object["answer"].append(i[0])
     else:
-        print("答案库中不存在该题答案，蒙一个A选项吧")
-        answer_object["answer"] = [question["answer_list"][0][0]]
+        print("答案库中不存在该题答案，蒙一个C选项吧")
+        answer_object["answer"] = [question["answer_list"][2][0]]
 
     return answer_object, question
 
@@ -314,10 +318,15 @@ def Start(token):
 
     ReadAnswerFromFile()
 
-    header = BuildHeader(token)
-
     try:
         while True:
+            if modeRandom:
+                mode = modeIdList[random.randrange(0, 4)]
+                modeId = mode["id"]
+                print("这一轮，这一轮是", mode["name"])
+
+            header = BuildHeader(token)
+
             question_list, race_code = StartQuiz(header)
             for i in range(0, 20):
                 if SubmitAnswer(BuildAnswerObject(GetQuestionDetail(question_list[i], header)), header):
@@ -371,10 +380,12 @@ def PrintHelp():
     print("fxxkSsxx")
     print(sys.argv[0])
     print()
-    print("    -a, --auto       自动更新token  （默认关）")
-    print("    -h, --help       显示此帮助信息")
-    print("    -i, --inform     启用webhook通知（默认关）")
-    print("    -v, --version    显示版本号")
+    print("    -a, --auto         自动更新token  （默认关）")
+    print("    -h, --help         显示此帮助信息")
+    print("    -i, --inform       启用webhook通知（默认关）")
+    print("    -m, --mode [index] 选择题目分类，默认0:随机")
+    print("                       1:英雄篇, 2:复兴篇, 3:创新篇, 4:信念篇")
+    print("    -v, --version      显示版本号")
     print()
     print("https://github.com/deximy/FxxkSsxx")
 
@@ -384,7 +395,7 @@ if __name__ == "__main__":
 
     try:
         opts, args = getopt.getopt(
-            argv, "ahiv", ["auto", "help", "inform", "version"])
+            argv, "ahim:v", ["auto", "help", "inform", "mode=", "version"])
     except getopt.GetoptError:
         PrintHelp()
         Pause()
@@ -399,6 +410,20 @@ if __name__ == "__main__":
             sys.exit()
         elif opt in ['-i', '--inform']:
             informEnabled = True
+        elif opt in ['-m', '--mode']:
+            try:
+                mode = int(arg)
+                if mode not in range(0, 5):
+                    raise ValueError()
+                if mode == 0:
+                    modeRandom = True
+                else:
+                    modeRandom = False
+                    modeId = modeIdList[mode - 1]["id"]
+            except ValueError:
+                PrintHelp()
+                Pause()
+                sys.exit()
         elif opt in ['-v', '--version']:
             print(VERSION_NAME)
             Pause()
@@ -410,7 +435,7 @@ if __name__ == "__main__":
     token = input("请输入token：").strip()
     if token.find("token:") == 0:
         token = token[6:]
-    token = token.strip("\"")
+    token = token.strip("\" ")
 
     tokenInfo = ParseToken(token)
     expireTime = tokenInfo["expire"]
