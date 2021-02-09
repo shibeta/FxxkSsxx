@@ -327,12 +327,19 @@ def Start(token):
 
             question_list, race_code = StartQuiz(header)
             for i in range(0, 20):
-                if SubmitAnswer(BuildAnswerObject(GetQuestionDetail(question_list[i], header)), header):
-                    print("第", i + 1, "题回答正确！")
-                    time.sleep(float(random.randint(500, 900)) / 1000)
-                else:
-                    print("第", i + 1, "题回答错误，答案已更新！")
-                    time.sleep(float(random.randrange(1500, 3000)) / 1000)
+                try:
+                    if SubmitAnswer(BuildAnswerObject(GetQuestionDetail(question_list[i], header)), header):
+                        print("第", i + 1, "题回答正确！")
+                        time.sleep(float(random.randint(500, 900)) / 1000)
+                    else:
+                        print("第", i + 1, "题回答错误，答案已更新！")
+                        time.sleep(float(random.randrange(1500, 3000)) / 1000)
+                except MyError as err:
+                    if err.code == 2104: # 2104: Question not exist
+                        SendNotification("问题不存在，已跳过：" + question_list[i])
+                        pass
+                    else:
+                        raise err
 
                 if i == 10:
                     if CheckVerification(header):
