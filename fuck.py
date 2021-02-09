@@ -41,8 +41,7 @@ class MyError(Exception):
         return "{}({})".format(self.msg, self.code)
 
 
-def SubmitVerification(header):
-    code = "HD1bhUGI4d/FhRfIX4m972tZ0g3jRHIwH23ajyre9m1Jxyw4CQ1bMKeIG5T/voFOsKLmnazWkPe6yBbr+juVcMkPwqyafu4JCDePPsVEbVSjLt8OsiMgjloG1fPKANShQCHAX6BwpK33pEe8jSx55l3Ruz/HfcSjDLEHCATdKs4="
+def SubmitVerification(header, code="HD1bhUGI4d/FhRfIX4m972tZ0g3jRHIwH23ajyre9m1Jxyw4CQ1bMKeIG5T/voFOsKLmnazWkPe6yBbr+juVcMkPwqyafu4JCDePPsVEbVSjLt8OsiMgjloG1fPKANShQCHAX6BwpK33pEe8jSx55l3Ruz/HfcSjDLEHCATdKs4="):
     submit_data = {
         "activity_id": "5f71e934bcdbf3a8c3ba5061",
         "mode_id": modeId,
@@ -56,8 +55,7 @@ def SubmitVerification(header):
         raise MyError(result["code"], "提交验证码失败：" + str(result))
 
 
-def CheckVerification(header):
-    code = "E5ZKeoD8xezW4TVEn20JVHPFVJkBIfPg+zvMGW+kx1s29cUNFfNka1+1Fr7lUWsyUQhjiZXHDcUhbOYJLK4rS5MflFUvwSwd1B+1kul06t1z9x0mfxQZYggbnrJe3PKEk4etwG/rm3s3FFJd/EbFSdanfslt41aULzJzSIJ/HWI="
+def CheckVerification(header, code="E5ZKeoD8xezW4TVEn20JVHPFVJkBIfPg+zvMGW+kx1s29cUNFfNka1+1Fr7lUWsyUQhjiZXHDcUhbOYJLK4rS5MflFUvwSwd1B+1kul06t1z9x0mfxQZYggbnrJe3PKEk4etwG/rm3s3FFJd/EbFSdanfslt41aULzJzSIJ/HWI="):
     submit_data = {
         "activity_id": "5f71e934bcdbf3a8c3ba5061",
         "mode_id": modeId,
@@ -330,10 +328,10 @@ def Start(token):
             question_list, race_code = StartQuiz(header)
             for i in range(0, 20):
                 if SubmitAnswer(BuildAnswerObject(GetQuestionDetail(question_list[i], header)), header):
-                    print("第", i, "题回答正确！")
+                    print("第", i + 1, "题回答正确！")
                     time.sleep(float(random.randint(500, 900)) / 1000)
                 else:
-                    print("第", i, "题回答错误，答案已更新！")
+                    print("第", i + 1, "题回答错误，答案已更新！")
                     time.sleep(float(random.randrange(1500, 3000)) / 1000)
 
                 if i == 10:
