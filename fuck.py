@@ -262,8 +262,10 @@ def SubmitAnswer(answer_object, header):
     elif result_object["data"]["correct"] and answer_dictionary.__contains__(answer_object[1]["title"]):
         return True
     elif result_object["data"]["correct"] and not answer_dictionary.__contains__(answer_object[1]["title"]):
+        SaveAnswerToFile()
         print("运气不错，居然蒙对了，保存答案")
     elif not result_object["data"]["correct"] and not answer_dictionary.__contains__(answer_object[1]["title"]):
+        SaveAnswerToFile()
         print("答案错误，更新答案")
 
     if not answer_dictionary.__contains__(answer_object[1]["title"]):
