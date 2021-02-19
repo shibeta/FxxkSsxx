@@ -322,6 +322,7 @@ def Start(token):
                 mode = modeIdList[random.randrange(0, 4)]
                 modeId = mode["id"]
                 print("这一轮，这一轮是", mode["name"])
+                time.sleep(1.5)
 
             header = BuildHeader(token)
 
@@ -438,16 +439,21 @@ if __name__ == "__main__":
     print("在地址栏输入javascript:document.write(localStorage.token)复制显示的内容")
     print("或按F12，转到Console页面，输入localStorage.token后回车，输出的结果复制下来并输入即可")
     token = input("请输入token：").strip()
-    if token.find("token:") == 0:
-        token = token[6:]
-    token = token.strip("\" ")
+    try:
+        if token.find("token:") == 0:
+            token = token[6:]
+        token = token.strip("\" ")
 
-    tokenInfo = ParseToken(token)
-    expireTime = tokenInfo["expire"]
-    print(tokenInfo["name"], "，欢迎使用！")
-    print("uid: ", tokenInfo["uid"])
-    print("token有效期剩余：", time.strftime(
-        "%Hh %Mm %Ss", time.gmtime(expireTime - time.time())))
+        tokenInfo = ParseToken(token)
+        expireTime = tokenInfo["expire"]
+        print(tokenInfo["name"], "，欢迎使用！")
+        print("uid: ", tokenInfo["uid"])
+        print("token有效期剩余：", time.strftime(
+            "%Hh %Mm %Ss", time.gmtime(expireTime - time.time())))
+    except Exception as err:
+        print(traceback.format_exc())
+        Pause()
+        sys.exit(1)
 
     time.sleep(2.5)
     Start(token)
