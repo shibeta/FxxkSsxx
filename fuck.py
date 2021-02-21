@@ -29,6 +29,7 @@ mode_id = None
 random_mode_enabled = True
 inform_enabled = False
 auto_refresh_token_enabled = False
+expire_time = -1
 
 
 class MyError(Exception):
@@ -313,7 +314,7 @@ def Pause():
 
 def Start(token):
     global mode_id
-    global expireTime
+    global expire_time
 
     ReadAnswerFromFile()
 
@@ -353,13 +354,13 @@ def Start(token):
             FinishQuiz(race_code, header)
             time.sleep(float(random.randrange(700, 2000)) / 1000)
 
-            if auto_refresh_token_enabled and expireTime - time.time() < 500:
+            if auto_refresh_token_enabled and expire_time - time.time() < 500:
                 new_token = RefreshToken(header)
-                expireTime = ParseToken(new_token)["expire"]
+                expire_time = ParseToken(new_token)["expire"]
                 token = new_token
                 SendNotification(new_token)
                 SendNotification(
-                    "token已更新至 " + time.asctime(time.localtime(expireTime)))
+                    "token已更新至 " + time.asctime(time.localtime(expire_time)))
                 time.sleep(5)
 
     except MyError as err:
@@ -447,10 +448,11 @@ if __name__ == "__main__":
         token = token.strip("\" ")
 
         token_info = ParseToken(token)
+        expire_time = token_info["expire"]
         print(token_info["name"], "，欢迎使用！")
         print("uid: ", token_info["uid"])
         print("token有效期剩余：", time.strftime(
-            "%Hh %Mm %Ss", time.gmtime(token_info["expire"] - time.time())))
+            "%Hh %Mm %Ss", time.gmtime(expire_time - time.time())))
     except Exception as err:
         print(traceback.format_exc())
         Pause()
