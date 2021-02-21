@@ -15,21 +15,20 @@ import traceback
 import getopt
 import base64
 
-VERSION_NAME = "fxxkSsxx 1.3 beta"
+VERSION_NAME = "FxxkSsxx 1.4"
 
 answer_dictionary = {}
-expireTime = -1
 hit_count = 0
-modeIdList = [
+mode_id_list = [
     {"id": "5f71e934bcdbf3a8c3ba51d5", "name": "英雄篇"},
     {"id": "5f71e934bcdbf3a8c3ba51d6", "name": "复兴篇"},
     {"id": "5f71e934bcdbf3a8c3ba51d7", "name": "创新篇"},
     {"id": "5f71e934bcdbf3a8c3ba51d8", "name": "信念篇"},
 ]
-modeId = None
-modeRandom = True
-informEnabled = False
-autoRefreshTokenEnabled = False
+mode_id = None
+random_mode_enabled = True
+inform_enabled = False
+auto_refresh_token_enabled = False
 
 
 class MyError(Exception):
@@ -44,7 +43,7 @@ class MyError(Exception):
 def SubmitVerification(header, code="HD1bhUGI4d/FhRfIX4m972tZ0g3jRHIwH23ajyre9m1Jxyw4CQ1bMKeIG5T/voFOsKLmnazWkPe6yBbr+juVcMkPwqyafu4JCDePPsVEbVSjLt8OsiMgjloG1fPKANShQCHAX6BwpK33pEe8jSx55l3Ruz/HfcSjDLEHCATdKs4="):
     submit_data = {
         "activity_id": "5f71e934bcdbf3a8c3ba5061",
-        "mode_id": modeId,
+        "mode_id": mode_id,
         "way": "1",
         "code": code
     }
@@ -58,7 +57,7 @@ def SubmitVerification(header, code="HD1bhUGI4d/FhRfIX4m972tZ0g3jRHIwH23ajyre9m1
 def CheckVerification(header, code="E5ZKeoD8xezW4TVEn20JVHPFVJkBIfPg+zvMGW+kx1s29cUNFfNka1+1Fr7lUWsyUQhjiZXHDcUhbOYJLK4rS5MflFUvwSwd1B+1kul06t1z9x0mfxQZYggbnrJe3PKEk4etwG/rm3s3FFJd/EbFSdanfslt41aULzJzSIJ/HWI="):
     submit_data = {
         "activity_id": "5f71e934bcdbf3a8c3ba5061",
-        "mode_id": modeId,
+        "mode_id": mode_id,
         "way": "1",
         "code": code
     }
@@ -102,11 +101,11 @@ def RefreshToken(header):
 
 
 def SendNotification(msg):
-    if not informEnabled:
+    if not inform_enabled:
         print("[info] ", msg)
         return
     url = "http://localhost:6666"
-    payload = {"type": "fxxkSsxx", "msg": msg}
+    payload = {"type": VERSION_NAME, "msg": msg}
     response = requests.post(url, json=payload)
     print(response.text)
 
@@ -135,7 +134,7 @@ def BuildHeader(token):
         'Connection': 'keep-alive',
         'DNT': '1',
         'Host': 'ssxx.univs.cn',
-        'Referer': 'https://ssxx.univs.cn/client/exam/5f71e934bcdbf3a8c3ba5061/1/1/' + modeId,
+        'Referer': 'https://ssxx.univs.cn/client/exam/5f71e934bcdbf3a8c3ba5061/1/1/' + mode_id,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36',
         'Authorization': 'Bearer ' + token,
     }
@@ -156,7 +155,7 @@ def StartQuiz(header):
     print("尝试开始考试……")
 
     url = "https://ssxx.univs.cn/cgi-bin/race/beginning/?activity_id=5f71e934bcdbf3a8c3ba5061&mode_id={}&way=1".format(
-        modeId)
+        mode_id)
 
     for fail in [0, 1, 2]:    # 最多尝试等待3次
         response = requests.request("GET", url, headers=header)
@@ -190,7 +189,7 @@ def GetTitleMd5(title):
 
 def GetQuestionDetail(question_id, header):
     url = "https://ssxx.univs.cn/cgi-bin/race/question/?activity_id=5f71e934bcdbf3a8c3ba5061&question_id={}&mode_id={}&way=1".format(
-        question_id, modeId)
+        question_id, mode_id)
 
     response = requests.request("GET", url, headers=header)
 
@@ -224,7 +223,7 @@ def BuildAnswerObject(question):
         "activity_id": "5f71e934bcdbf3a8c3ba5061",
         "question_id": question["id"],
         "answer": None,
-        "mode_id": modeId,
+        "mode_id": mode_id,
         "way": "1"
     }
 
@@ -236,8 +235,8 @@ def BuildAnswerObject(question):
             if i[1] in answer_dictionary[question["title"]]:
                 answer_object["answer"].append(i[0])
     else:
-        print("答案库中不存在该题答案，蒙一个C选项吧")
-        answer_object["answer"] = [question["answer_list"][2][0]]
+        print("答案库中不存在该题答案，蒙一个A选项吧")
+        answer_object["answer"] = [question["answer_list"][0][0]]
 
     return answer_object, question
 
@@ -313,16 +312,16 @@ def Pause():
 
 
 def Start(token):
-    global modeId
+    global mode_id
     global expireTime
 
     ReadAnswerFromFile()
 
     try:
         while True:
-            if modeRandom:
-                mode = modeIdList[random.randrange(0, 4)]
-                modeId = mode["id"]
+            if random_mode_enabled:
+                mode = mode_id_list[random.randrange(0, 4)]
+                mode_id = mode["id"]
                 print("这一轮，这一轮是", mode["name"])
                 time.sleep(1.5)
 
@@ -354,7 +353,7 @@ def Start(token):
             FinishQuiz(race_code, header)
             time.sleep(float(random.randrange(700, 2000)) / 1000)
 
-            if autoRefreshTokenEnabled and expireTime - time.time() < 500:
+            if auto_refresh_token_enabled and expireTime - time.time() < 500:
                 new_token = RefreshToken(header)
                 expireTime = ParseToken(new_token)["expire"]
                 token = new_token
@@ -385,7 +384,7 @@ def Start(token):
 
 
 def PrintHelp():
-    print("fxxkSsxx")
+    print("FxxkSsxx")
     print(sys.argv[0])
     print()
     print("    -a, --auto         自动更新token  （默认关）")
@@ -411,23 +410,23 @@ if __name__ == "__main__":
 
     for opt, arg in opts:
         if opt in ['-a', '--auto']:
-            autoRefreshTokenEnabled = True
+            auto_refresh_token_enabled = True
         elif opt in ['-h', '--help']:
             PrintHelp()
             Pause()
             sys.exit()
         elif opt in ['-i', '--inform']:
-            informEnabled = True
+            inform_enabled = True
         elif opt in ['-m', '--mode']:
             try:
                 mode = int(arg)
                 if mode not in range(0, 5):
                     raise ValueError()
                 if mode == 0:
-                    modeRandom = True
+                    random_mode_enabled = True
                 else:
-                    modeRandom = False
-                    modeId = modeIdList[mode - 1]["id"]
+                    random_mode_enabled = False
+                    mode_id = mode_id_list[mode - 1]["id"]
             except ValueError:
                 PrintHelp()
                 Pause()
@@ -437,6 +436,7 @@ if __name__ == "__main__":
             Pause()
             sys.exit()
 
+    print("当前版本：" + VERSION_NAME)
     print("打开网页端：https://ssxx.univs.cn/client/detail/5f71e934bcdbf3a8c3ba5061 认证登录成功后")
     print("在地址栏输入javascript:document.write(localStorage.token)复制显示的内容")
     print("或按F12，转到Console页面，输入localStorage.token后回车，输出的结果复制下来并输入即可")
@@ -446,12 +446,11 @@ if __name__ == "__main__":
             token = token[6:]
         token = token.strip("\" ")
 
-        tokenInfo = ParseToken(token)
-        expireTime = tokenInfo["expire"]
-        print(tokenInfo["name"], "，欢迎使用！")
-        print("uid: ", tokenInfo["uid"])
+        token_info = ParseToken(token)
+        print(token_info["name"], "，欢迎使用！")
+        print("uid: ", token_info["uid"])
         print("token有效期剩余：", time.strftime(
-            "%Hh %Mm %Ss", time.gmtime(expireTime - time.time())))
+            "%Hh %Mm %Ss", time.gmtime(token_info["expire"] - time.time())))
     except Exception as err:
         print(traceback.format_exc())
         Pause()
