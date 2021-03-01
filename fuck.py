@@ -236,8 +236,9 @@ def BuildAnswerObject(question):
             if i[1] in answer_dictionary[question["title"]]:
                 answer_object["answer"].append(i[0])
     else:
-        print("答案库中不存在该题答案，蒙一个A选项吧")
-        answer_object["answer"] = [question["answer_list"][0][0]]
+        answer_choice=random.randint(0, len(question["answer_list"])-1)
+        print("答案库中不存在该题答案，蒙一个"+chr(answer_choice+65)+"选项吧")
+        answer_object["answer"] = [question["answer_list"][answer_choice][0]]
 
     return answer_object, question
 
